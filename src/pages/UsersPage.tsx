@@ -1,43 +1,63 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getUsers, createUser, deleteUser, updateUser } from "../api";
 import { User } from "../types";
 
 export default function UsersPage() {
-  // TODO: add role check before rendering
-  // if (user.role !== 'admin') return null;
-
-  const [users, setUsers] = useState<User[]>([
-    { id: "1", email: "admin@penguwave.io", role: "admin", status: "active", password: "admin123" },
-    { id: "2", email: "analyst@penguwave.io", role: "analyst", status: "active", password: "pass456" },
-    { id: "3", email: "viewer@penguwave.io", role: "viewer", status: "disabled", password: "view789" },
-  ]);
-
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState("analyst");
+  const [formError, setFormError] = useState("");
 
-  const handleAddUser = (e: React.FormEvent) => {
+  const fetchUsers = () => {
+    getUsers()
+      .then(setUsers)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(fetchUsers, []);
+
+  const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEmail || !newPassword) return;
+    setFormError("");
 
-    const newUser: User = {
-      id: String(Date.now()),
-      email: newEmail,
-      role: newRole,
-      status: "active",
-      password: newPassword,
-    };
-
-    setUsers([...users, newUser]);
-    setNewEmail("");
-    setNewPassword("");
-    setNewRole("analyst");
-    setShowForm(false);
+    try {
+      await createUser({ email: newEmail, password: newPassword, role: newRole });
+      setNewEmail("");
+      setNewPassword("");
+      setNewRole("analyst");
+      setShowForm(false);
+      fetchUsers();
+    } catch (err: any) {
+      setFormError(err.message);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setUsers(users.filter((u) => u.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+    try {
+      await deleteUser(id);
+      fetchUsers();
+    } catch (err: any) {
+      setError(err.message);
+    }
   };
+
+  const handleToggleStatus = async (user: User) => {
+    const newStatus = user.status === "active" ? "disabled" : "active";
+    try {
+      await updateUser(user.id, { status: newStatus });
+      fetchUsers();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  if (loading) return <div className="page-container"><p>Loading users...</p></div>;
 
   return (
     <div className="page-container">
@@ -48,9 +68,20 @@ export default function UsersPage() {
         </button>
       </div>
 
+      {error && (
+        <div style={{ background: "#fee", border: "1px solid #fcc", color: "#c33", padding: "8px 12px", marginBottom: 16, fontSize: 13, borderRadius: 3 }}>
+          {error}
+        </div>
+      )}
+
       {showForm && (
         <div style={{ border: "1px solid #ddd", padding: 16, marginBottom: 20, background: "#fafafa" }}>
           <h3 style={{ marginBottom: 12 }}>New User</h3>
+          {formError && (
+            <div style={{ background: "#fee", border: "1px solid #fcc", color: "#c33", padding: "8px 12px", marginBottom: 12, fontSize: 13, borderRadius: 3 }}>
+              {formError}
+            </div>
+          )}
           <form onSubmit={handleAddUser}>
             <div style={{ marginBottom: 8 }}>
               <label>Email</label>
@@ -65,10 +96,10 @@ export default function UsersPage() {
             <div style={{ marginBottom: 8 }}>
               <label>Password</label>
               <input
-                type="text"
+                type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="password"
+                placeholder="Minimum 6 characters"
                 required
               />
             </div>
@@ -93,7 +124,6 @@ export default function UsersPage() {
             <th>Email</th>
             <th>Role</th>
             <th>Status</th>
-            <th>Password</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -107,15 +137,24 @@ export default function UsersPage() {
                   {user.status}
                 </span>
               </td>
-              <td style={{ fontFamily: "monospace", fontSize: 13 }}>{user.password}</td>
-              <td>
+              <td style={{ display: "flex", gap: 12 }}>
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleToggleStatus(user);
+                  }}
+                  style={{ color: "#0066cc", fontSize: 13 }}
+                >
+                  {user.status === "active" ? "Disable" : "Enable"}
+                </a>
                 <a
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
                     handleDelete(user.id);
                   }}
-                  style={{ color: "red" }}
+                  style={{ color: "red", fontSize: 13 }}
                 >
                   Delete
                 </a>

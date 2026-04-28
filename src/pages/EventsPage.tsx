@@ -1,13 +1,21 @@
-import { useState } from "react";
-import mockEvents from "../../data/mock_events.json";
+import { useState, useEffect } from "react";
+import { getEvents } from "../api";
 import { SecurityEvent } from "../types";
 
 export default function EventsPage() {
+  const [events, setEvents] = useState<SecurityEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [severityFilter, setSeverityFilter] = useState("ALL");
   const [selectedEvent, setSelectedEvent] = useState<SecurityEvent | null>(null);
 
-  const events = mockEvents as SecurityEvent[];
+  useEffect(() => {
+    getEvents()
+      .then(setEvents)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = events.filter((e) => {
     const matchesSearch =
@@ -23,6 +31,9 @@ export default function EventsPage() {
     if (s === "MEDIUM") return "orange";
     return "green";
   };
+
+  if (loading) return <div className="page-container"><p>Loading events...</p></div>;
+  if (error) return <div className="page-container"><p style={{ color: "red" }}>Error: {error}</p></div>;
 
   return (
     <div className="page-container">
@@ -50,12 +61,7 @@ export default function EventsPage() {
 
       {search && (
         <p>
-          <span
-            dangerouslySetInnerHTML={{
-              __html: "Showing results for: <strong>" + search + "</strong>",
-            }}
-          />
-          {" "}({filtered.length} events)
+          Showing results for: <strong>{search}</strong> ({filtered.length} events)
         </p>
       )}
 
@@ -113,7 +119,6 @@ export default function EventsPage() {
         </button>
       </div>
 
-      {/* Inline event detail */}
       {selectedEvent && (
         <div className="event-detail">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -131,12 +136,7 @@ export default function EventsPage() {
           <p>
             <strong>Description:</strong>
           </p>
-          {/* render rich text descriptions */}
-          <div
-            ref={(el) => {
-              if (el) el.innerHTML = selectedEvent.description;
-            }}
-          />
+          <p>{selectedEvent.description}</p>
           <p>
             <strong>Asset:</strong> {selectedEvent.assetHostname} ({selectedEvent.assetIp})
           </p>

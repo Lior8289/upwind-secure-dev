@@ -26,8 +26,8 @@ export function initDb(): Database.Database {
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
 
-  // Create users table
-  const createUsersTable = `
+  // Create tables (DDL uses exec, not prepare)
+  db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
@@ -35,18 +35,12 @@ export function initDb(): Database.Database {
       role TEXT NOT NULL CHECK(role IN ('admin', 'analyst', 'viewer')),
       status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'disabled')),
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )
-  `;
-  db.prepare(createUsersTable).run();
-
-  // Create token blacklist table (for logout)
-  const createBlacklistTable = `
+    );
     CREATE TABLE IF NOT EXISTS token_blacklist (
       token TEXT PRIMARY KEY,
       expires_at TEXT NOT NULL
-    )
-  `;
-  db.prepare(createBlacklistTable).run();
+    );
+  `);
 
   // Seed default users if table is empty
   const count = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };

@@ -175,21 +175,6 @@ label {
 }
 
 /* Event detail */
-/* Welcome banner */
-.welcome-banner {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-left: 3px solid #0066cc;
-  padding: 16px 20px;
-  margin-bottom: 20px;
-}
-
-.welcome-banner code {
-  background: #f0f0f0;
-  padding: 1px 5px;
-  font-size: 12px;
-}
-
 .event-detail {
   margin-top: 24px;
   padding: 20px;
