@@ -82,29 +82,15 @@ router.patch("/:id", (req: Request, res: Response): void => {
     return;
   }
 
-  // Prevent self-demotion or self-disable
-  if (req.user!.userId === id) {
-    if (role && role !== "admin") {
-      res.status(400).json({ error: "Cannot demote your own admin account" });
-      return;
-    }
+  // Admin users cannot be disabled or demoted
+  if (existing.role === "admin") {
     if (status && status === "disabled") {
-      res.status(400).json({ error: "Cannot disable your own account" });
+      res.status(400).json({ error: "Admin users cannot be disabled" });
       return;
     }
-  }
-
-  // Prevent removing the last active admin
-  if (existing.role === "admin" && existing.status === "active") {
-    const wouldLoseAdmin = (role && role !== "admin") || (status && status === "disabled");
-    if (wouldLoseAdmin) {
-      const activeAdminCount = (db.prepare(
-        "SELECT COUNT(*) as count FROM users WHERE role = 'admin' AND status = 'active'"
-      ).get() as { count: number }).count;
-      if (activeAdminCount <= 1) {
-        res.status(400).json({ error: "Cannot remove the last active admin" });
-        return;
-      }
+    if (role && role !== "admin") {
+      res.status(400).json({ error: "Admin users cannot be demoted" });
+      return;
     }
   }
 
@@ -141,15 +127,10 @@ router.delete("/:id", (req: Request, res: Response): void => {
     return;
   }
 
-  // Prevent deleting the last active admin
-  if (existing.role === "admin" && existing.status === "active") {
-    const activeAdminCount = (db.prepare(
-      "SELECT COUNT(*) as count FROM users WHERE role = 'admin' AND status = 'active'"
-    ).get() as { count: number }).count;
-    if (activeAdminCount <= 1) {
-      res.status(400).json({ error: "Cannot delete the last active admin" });
-      return;
-    }
+  // Admin users cannot be deleted
+  if (existing.role === "admin") {
+    res.status(400).json({ error: "Admin users cannot be deleted" });
+    return;
   }
 
   db.prepare("DELETE FROM users WHERE id = ?").run(id);

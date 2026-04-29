@@ -138,26 +138,32 @@ export default function UsersPage() {
                 </span>
               </td>
               <td style={{ display: "flex", gap: 12 }}>
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleToggleStatus(user);
-                  }}
-                  style={{ color: "#0066cc", fontSize: 13 }}
-                >
-                  {user.status === "active" ? "Disable" : "Enable"}
-                </a>
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleDelete(user.id);
-                  }}
-                  style={{ color: "red", fontSize: 13 }}
-                >
-                  Delete
-                </a>
+                {user.role !== "admin" ? (
+                  <>
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleToggleStatus(user);
+                      }}
+                      style={{ color: "#0066cc", fontSize: 13 }}
+                    >
+                      {user.status === "active" ? "Disable" : "Enable"}
+                    </a>
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDelete(user.id);
+                      }}
+                      style={{ color: "red", fontSize: 13 }}
+                    >
+                      Delete
+                    </a>
+                  </>
+                ) : (
+                  <span style={{ color: "#999", fontSize: 13 }}>Protected</span>
+                )}
               </td>
             </tr>
           ))}
