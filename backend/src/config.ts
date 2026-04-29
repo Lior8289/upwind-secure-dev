@@ -7,5 +7,5 @@ export const config = {
   bcryptRounds: 12,
   dbPath: path.join(__dirname, "..", "data", "penguwave.db"),
   eventsPath: path.join(__dirname, "..", "..", "data", "mock_events.json"),
-  corsOrigin: process.env.CORS_ORIGIN || "http://localhost:5173",
+  corsOrigin: process.env.CORS_ORIGIN || "http://localhost:5174",
 };

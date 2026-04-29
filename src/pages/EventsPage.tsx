@@ -17,6 +17,16 @@ export default function EventsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelectedEvent(null);
+    };
+    if (selectedEvent) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [selectedEvent]);
+
   const filtered = events.filter((e) => {
     const matchesSearch =
       e.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -25,12 +35,6 @@ export default function EventsPage() {
     const matchesSeverity = severityFilter === "ALL" || e.severity === severityFilter;
     return matchesSearch && matchesSeverity;
   });
-
-  const severityColor = (s: string) => {
-    if (s === "HIGH") return "red";
-    if (s === "MEDIUM") return "orange";
-    return "green";
-  };
 
   if (loading) return <div className="page-container"><p>Loading events...</p></div>;
   if (error) return <div className="page-container"><p style={{ color: "red" }}>Error: {error}</p></div>;
@@ -82,8 +86,10 @@ export default function EventsPage() {
               onClick={() => setSelectedEvent(event)}
               style={{ cursor: "pointer" }}
             >
-              <td style={{ color: severityColor(event.severity), fontWeight: 600 }}>
-                {event.severity}
+              <td>
+                <span className={`severity-table-badge ${event.severity.toLowerCase()}`}>
+                  {event.severity}
+                </span>
               </td>
               <td>{event.title}</td>
               <td style={{ fontFamily: "monospace", fontSize: 13 }}>
@@ -120,38 +126,76 @@ export default function EventsPage() {
       </div>
 
       {selectedEvent && (
-        <div className="event-detail">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h2>{selectedEvent.title}</h2>
-            <button onClick={() => setSelectedEvent(null)} style={{ cursor: "pointer" }}>
-              Close
-            </button>
+        <>
+          <div className="event-detail-backdrop" onClick={() => setSelectedEvent(null)} />
+          <div className="event-detail-panel">
+            <div className="event-detail-header">
+              <h2>{selectedEvent.title}</h2>
+              <button className="event-detail-close" onClick={() => setSelectedEvent(null)}>
+                &times;
+              </button>
+            </div>
+            <div className="event-detail-body">
+              <div className="event-detail-section">
+                <div className="event-detail-section-title">Overview</div>
+                <div className="event-detail-grid">
+                  <div className="event-detail-field">
+                    <div className="event-detail-field-label">Severity</div>
+                    <div className="event-detail-field-value">
+                      <span className={`severity-badge ${selectedEvent.severity.toLowerCase()}`}>
+                        {selectedEvent.severity}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="event-detail-field">
+                    <div className="event-detail-field-label">Timestamp</div>
+                    <div className="event-detail-field-value">
+                      {new Date(selectedEvent.timestamp).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="event-detail-field full-width">
+                    <div className="event-detail-field-label">Description</div>
+                    <div className="event-detail-field-value">{selectedEvent.description}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="event-detail-section">
+                <div className="event-detail-section-title">Network</div>
+                <div className="event-detail-grid">
+                  <div className="event-detail-field">
+                    <div className="event-detail-field-label">Asset Hostname</div>
+                    <div className="event-detail-field-value mono">{selectedEvent.assetHostname}</div>
+                  </div>
+                  <div className="event-detail-field">
+                    <div className="event-detail-field-label">Asset IP</div>
+                    <div className="event-detail-field-value mono">{selectedEvent.assetIp}</div>
+                  </div>
+                  <div className="event-detail-field full-width">
+                    <div className="event-detail-field-label">Source IP</div>
+                    <div className="event-detail-field-value mono">{selectedEvent.sourceIp}</div>
+                  </div>
+                </div>
+              </div>
+
+              {selectedEvent.tags.length > 0 && (
+                <div className="event-detail-section">
+                  <div className="event-detail-section-title">Tags</div>
+                  <div className="event-detail-tags">
+                    {selectedEvent.tags.map((tag) => (
+                      <span key={tag} className="event-detail-tag">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="event-detail-section event-detail-raw">
+                <div className="event-detail-section-title">Raw Event Data</div>
+                <pre>{JSON.stringify(selectedEvent, null, 2)}</pre>
+              </div>
+            </div>
           </div>
-          <p>
-            <strong>Severity:</strong>{" "}
-            <span style={{ color: severityColor(selectedEvent.severity) }}>
-              {selectedEvent.severity}
-            </span>
-          </p>
-          <p>
-            <strong>Description:</strong>
-          </p>
-          <p>{selectedEvent.description}</p>
-          <p>
-            <strong>Asset:</strong> {selectedEvent.assetHostname} ({selectedEvent.assetIp})
-          </p>
-          <p>
-            <strong>Source IP:</strong> {selectedEvent.sourceIp}
-          </p>
-          <p>
-            <strong>Tags:</strong> {selectedEvent.tags.join(", ")}
-          </p>
-          <p>
-            <strong>Timestamp:</strong> {new Date(selectedEvent.timestamp).toLocaleString()}
-          </p>
-          <h3>Raw Event Data</h3>
-          <pre>{JSON.stringify(selectedEvent, null, 2)}</pre>
-        </div>
+        </>
       )}
     </div>
   );
