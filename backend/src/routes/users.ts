@@ -75,10 +75,37 @@ router.patch("/:id", (req: Request, res: Response): void => {
 
   const db = getDb();
 
-  const existing = db.prepare("SELECT id FROM users WHERE id = ?").get(id);
+  const existing = db.prepare("SELECT id, role, status FROM users WHERE id = ?").get(id) as
+    { id: string; role: string; status: string } | undefined;
   if (!existing) {
     res.status(404).json({ error: "User not found" });
     return;
+  }
+
+  // Prevent self-demotion or self-disable
+  if (req.user!.userId === id) {
+    if (role && role !== "admin") {
+      res.status(400).json({ error: "Cannot demote your own admin account" });
+      return;
+    }
+    if (status && status === "disabled") {
+      res.status(400).json({ error: "Cannot disable your own account" });
+      return;
+    }
+  }
+
+  // Prevent removing the last active admin
+  if (existing.role === "admin" && existing.status === "active") {
+    const wouldLoseAdmin = (role && role !== "admin") || (status && status === "disabled");
+    if (wouldLoseAdmin) {
+      const activeAdminCount = (db.prepare(
+        "SELECT COUNT(*) as count FROM users WHERE role = 'admin' AND status = 'active'"
+      ).get() as { count: number }).count;
+      if (activeAdminCount <= 1) {
+        res.status(400).json({ error: "Cannot remove the last active admin" });
+        return;
+      }
+    }
   }
 
   // Build dynamic update
@@ -107,10 +134,22 @@ router.delete("/:id", (req: Request, res: Response): void => {
 
   const db = getDb();
 
-  const existing = db.prepare("SELECT id FROM users WHERE id = ?").get(id);
+  const existing = db.prepare("SELECT id, role, status FROM users WHERE id = ?").get(id) as
+    { id: string; role: string; status: string } | undefined;
   if (!existing) {
     res.status(404).json({ error: "User not found" });
     return;
+  }
+
+  // Prevent deleting the last active admin
+  if (existing.role === "admin" && existing.status === "active") {
+    const activeAdminCount = (db.prepare(
+      "SELECT COUNT(*) as count FROM users WHERE role = 'admin' AND status = 'active'"
+    ).get() as { count: number }).count;
+    if (activeAdminCount <= 1) {
+      res.status(400).json({ error: "Cannot delete the last active admin" });
+      return;
+    }
   }
 
   db.prepare("DELETE FROM users WHERE id = ?").run(id);
